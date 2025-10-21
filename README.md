@@ -101,8 +101,9 @@ Pushes to the `main` or `master` branch automatically trigger a deployment via G
 ### GitHub Pages Setup
 
 1. Go to your repository Settings → Pages
-2. Set Source to "GitHub Actions"
-3. The workflow will automatically build and deploy on push
+2. Set Source to "Deploy from a branch"
+3. Select branch: `gh-pages` and folder: `/ (root)`
+4. Save - the workflow will automatically build and deploy on push
 
 The app will be available at: `https://[username].github.io/CallDataParser/`
 
