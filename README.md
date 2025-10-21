@@ -2,6 +2,10 @@
 
 A web-based parser for Uniswap Universal Router transaction calldata, supporting V2, V3, and V4 swaps.
 
+## 🚀 Live Demo
+
+**[Try it now!](https://babgev.github.io/CallDataParser/)**
+
 ## Features
 
 - ✅ Parse Universal Router calldata for V2, V3, and V4 transactions
@@ -85,6 +89,22 @@ src/
 1. **Parser**: Uses `@uniswap/universal-router-sdk`'s `CommandParser.parseCalldata()` to decode transaction calldata
 2. **Formatter**: Uses `viem` utilities to format addresses and Wei amounts
 3. **UI**: Modern React components with Tailwind CSS for a clean, responsive interface
+
+## Deployment
+
+This app is automatically deployed to GitHub Pages using GitHub Actions.
+
+### Automatic Deployment
+
+Pushes to the `main` or `master` branch automatically trigger a deployment via GitHub Actions.
+
+### GitHub Pages Setup
+
+1. Go to your repository Settings → Pages
+2. Set Source to "GitHub Actions"
+3. The workflow will automatically build and deploy on push
+
+The app will be available at: `https://[username].github.io/CallDataParser/`
 
 ## License
 
