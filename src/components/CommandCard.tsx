@@ -23,12 +23,15 @@ export function CommandCard({ command, index }: CommandCardProps) {
 
   const enhanceParams = async () => {
     setLoading(true);
+    console.log('Starting enhancement for command:', command.commandName);
     try {
       const enhanced: EnhancedParam[] = [];
 
       for (const param of command.params) {
         try {
+          console.log('Enhancing param:', param.name, 'value type:', typeof param.value);
           const result = await formatValueEnhanced(param.name, param.value);
+          console.log('Enhanced result for', param.name, ':', result.formatted.substring(0, 100));
           enhanced.push({
             name: param.name,
             value: param.value,
@@ -47,6 +50,7 @@ export function CommandCard({ command, index }: CommandCardProps) {
         }
       }
 
+      console.log('Enhanced params complete:', enhanced.length, 'params');
       setEnhancedParams(enhanced);
     } catch (error) {
       console.error('Error in enhanceParams:', error);
@@ -135,11 +139,16 @@ export function CommandCard({ command, index }: CommandCardProps) {
                     {param.name}:
                   </span>
                   <button
-                    onClick={() => toggleRaw(idx)}
-                    className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400
-                             dark:hover:text-gray-200 underline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleRaw(idx);
+                      console.log('Toggle raw for', idx, ':', !showRaw[idx]);
+                    }}
+                    className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-700
+                             dark:hover:bg-gray-600 rounded text-gray-700 dark:text-gray-200
+                             font-medium transition-colors"
                   >
-                    {showRaw[idx] ? 'Show Formatted' : 'Show Raw'}
+                    {showRaw[idx] ? '📝 Formatted' : '🔍 Raw'}
                   </button>
                 </div>
 
