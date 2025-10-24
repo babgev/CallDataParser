@@ -21,29 +21,46 @@ export function CommandCard({ command, index }: CommandCardProps) {
   const [enhancedParams, setEnhancedParams] = useState<EnhancedParam[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const enhanceParams = async () => {
+    setLoading(true);
+    try {
+      const enhanced: EnhancedParam[] = [];
+
+      for (const param of command.params) {
+        try {
+          const result = await formatValueEnhanced(param.name, param.value);
+          enhanced.push({
+            name: param.name,
+            value: param.value,
+            formatted: result.formatted,
+            raw: result.raw
+          });
+        } catch (error) {
+          console.error('Error formatting param:', param.name, error);
+          // Fallback to raw format if enhancement fails
+          enhanced.push({
+            name: param.name,
+            value: param.value,
+            formatted: formatValue(param.name, param.value),
+            raw: JSON.stringify(param.value, null, 2)
+          });
+        }
+      }
+
+      setEnhancedParams(enhanced);
+    } catch (error) {
+      console.error('Error in enhanceParams:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (expanded && enhancedParams.length === 0) {
       enhanceParams();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expanded]);
-
-  const enhanceParams = async () => {
-    setLoading(true);
-    const enhanced: EnhancedParam[] = [];
-
-    for (const param of command.params) {
-      const result = await formatValueEnhanced(param.name, param.value);
-      enhanced.push({
-        name: param.name,
-        value: param.value,
-        formatted: result.formatted,
-        raw: result.raw
-      });
-    }
-
-    setEnhancedParams(enhanced);
-    setLoading(false);
-  };
 
   const toggleRaw = (idx: number) => {
     setShowRaw(prev => ({ ...prev, [idx]: !prev[idx] }));

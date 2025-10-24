@@ -82,62 +82,67 @@ export async function formatValueEnhanced(
 ): Promise<{ formatted: string; raw: string }> {
   const raw = JSON.stringify(value, null, 2);
 
-  // Handle null/undefined
-  if (value === null || value === undefined) {
-    return { formatted: 'null', raw: 'null' };
-  }
-
-  // Handle BigNumber amounts
-  if (isBigNumberLike(value)) {
-    const formatted = await formatTokenAmount(value, contextToken);
-    return { formatted, raw };
-  }
-
-  // Handle arrays
-  if (Array.isArray(value)) {
-    if (value.length === 0) {
-      return { formatted: '[]', raw: '[]' };
+  try {
+    // Handle null/undefined
+    if (value === null || value === undefined) {
+      return { formatted: 'null', raw: 'null' };
     }
 
-    // Check if it's a path array
-    if (value.every((item) => typeof item === 'object' && item && 'intermediateCurrency' in item)) {
-      const pathDesc = await formatPath(value);
-      return { formatted: pathDesc, raw };
-    }
-
-    return { formatted: `Array with ${value.length} items`, raw };
-  }
-
-  // Handle objects (like swap params)
-  if (typeof value === 'object') {
-    const obj = value as Record<string, any>;
-
-    // Handle swap-like objects
-    if ('currencyIn' in obj || 'currencyOut' in obj || 'path' in obj) {
-      const formatted = await formatSwapObject(obj);
+    // Handle BigNumber amounts
+    if (isBigNumberLike(value)) {
+      const formatted = await formatTokenAmount(value, contextToken);
       return { formatted, raw };
     }
 
-    return { formatted: 'Object', raw };
-  }
+    // Handle arrays
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        return { formatted: '[]', raw: '[]' };
+      }
 
-  // Handle addresses
-  if (typeof value === 'string' && value.startsWith('0x') && value.length === 42) {
-    const tokenInfo = await resolveToken(value);
-    if (tokenInfo) {
+      // Check if it's a path array
+      if (value.every((item) => typeof item === 'object' && item && 'intermediateCurrency' in item)) {
+        const pathDesc = await formatPath(value);
+        return { formatted: pathDesc, raw };
+      }
+
+      return { formatted: `Array with ${value.length} items`, raw };
+    }
+
+    // Handle objects (like swap params)
+    if (typeof value === 'object') {
+      const obj = value as Record<string, any>;
+
+      // Handle swap-like objects
+      if ('currencyIn' in obj || 'currencyOut' in obj || 'path' in obj) {
+        const formatted = await formatSwapObject(obj);
+        return { formatted, raw };
+      }
+
+      return { formatted: 'Object', raw };
+    }
+
+    // Handle addresses
+    if (typeof value === 'string' && value.startsWith('0x') && value.length === 42) {
+      const tokenInfo = await resolveToken(value);
+      if (tokenInfo) {
+        return {
+          formatted: `${tokenInfo.symbol} (${value.slice(0, 6)}...${value.slice(-4)})`,
+          raw: value
+        };
+      }
       return {
-        formatted: `${tokenInfo.symbol} (${value.slice(0, 6)}...${value.slice(-4)})`,
+        formatted: `${value.slice(0, 6)}...${value.slice(-4)}`,
         raw: value
       };
     }
-    return {
-      formatted: `${value.slice(0, 6)}...${value.slice(-4)}`,
-      raw: value
-    };
-  }
 
-  // Default
-  return { formatted: String(value), raw: String(value) };
+    // Default
+    return { formatted: String(value), raw: String(value) };
+  } catch (error) {
+    console.error('Error in formatValueEnhanced:', error);
+    return { formatted: 'Error formatting value', raw };
+  }
 }
 
 /**
