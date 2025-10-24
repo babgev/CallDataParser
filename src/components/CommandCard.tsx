@@ -14,7 +14,7 @@ export function CommandCard({ command, index }: CommandCardProps) {
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden
                     bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow">
       <div
-        className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750"
+        className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center justify-between">
@@ -52,7 +52,7 @@ export function CommandCard({ command, index }: CommandCardProps) {
       </div>
 
       {expanded && (
-        <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-750">
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900">
           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
             Parameters:
           </h4>
