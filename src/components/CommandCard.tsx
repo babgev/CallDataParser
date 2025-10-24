@@ -1,14 +1,53 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ParsedCommand } from '../types';
 import { formatValue } from '../utils/formatter';
+import { formatValueEnhanced } from '../utils/enhancedFormatter';
 
 interface CommandCardProps {
   command: ParsedCommand;
   index: number;
 }
 
+interface EnhancedParam {
+  name: string;
+  value: any;
+  formatted: string;
+  raw: string;
+}
+
 export function CommandCard({ command, index }: CommandCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [showRaw, setShowRaw] = useState<Record<number, boolean>>({});
+  const [enhancedParams, setEnhancedParams] = useState<EnhancedParam[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (expanded && enhancedParams.length === 0) {
+      enhanceParams();
+    }
+  }, [expanded]);
+
+  const enhanceParams = async () => {
+    setLoading(true);
+    const enhanced: EnhancedParam[] = [];
+
+    for (const param of command.params) {
+      const result = await formatValueEnhanced(param.name, param.value);
+      enhanced.push({
+        name: param.name,
+        value: param.value,
+        formatted: result.formatted,
+        raw: result.raw
+      });
+    }
+
+    setEnhancedParams(enhanced);
+    setLoading(false);
+  };
+
+  const toggleRaw = (idx: number) => {
+    setShowRaw(prev => ({ ...prev, [idx]: !prev[idx] }));
+  };
 
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden
@@ -56,20 +95,47 @@ export function CommandCard({ command, index }: CommandCardProps) {
           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
             Parameters:
           </h4>
+
+          {loading && (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Loading token information...
+            </div>
+          )}
+
           <div className="space-y-3">
-            {command.params.map((param, idx) => (
+            {(enhancedParams.length > 0 ? enhancedParams : command.params.map(p => ({
+              name: p.name,
+              value: p.value,
+              formatted: formatValue(p.name, p.value),
+              raw: JSON.stringify(p.value, null, 2)
+            }))).map((param, idx) => (
               <div
                 key={idx}
                 className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700"
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-2 mb-2">
                   <span className="font-medium text-sm text-blue-600 dark:text-blue-400 min-w-fit">
                     {param.name}:
                   </span>
-                  <span className="text-sm text-gray-900 dark:text-gray-100 break-all text-right">
-                    {formatValue(param.name, param.value)}
-                  </span>
+                  <button
+                    onClick={() => toggleRaw(idx)}
+                    className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400
+                             dark:hover:text-gray-200 underline"
+                  >
+                    {showRaw[idx] ? 'Show Formatted' : 'Show Raw'}
+                  </button>
                 </div>
+
+                {showRaw[idx] ? (
+                  <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap
+                                 break-all font-mono bg-gray-100 dark:bg-gray-900 p-2 rounded">
+                    {param.raw}
+                  </pre>
+                ) : (
+                  <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-all">
+                    {param.formatted}
+                  </div>
+                )}
               </div>
             ))}
           </div>
