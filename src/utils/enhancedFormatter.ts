@@ -33,7 +33,8 @@ function bigNumberToBigInt(bn: BigNumberLike): bigint {
  */
 export async function formatTokenAmount(
   amount: string | bigint | BigNumberLike,
-  tokenAddress?: string
+  tokenAddress?: string,
+  chainId?: string | null
 ): Promise<string> {
   let amountBigInt: bigint;
 
@@ -52,7 +53,7 @@ export async function formatTokenAmount(
 
   // Try to resolve token info
   if (tokenAddress) {
-    const tokenInfo = await resolveToken(tokenAddress);
+    const tokenInfo = await resolveToken(tokenAddress, chainId || undefined);
     if (tokenInfo) {
       const formatted = formatUnits(amountBigInt, tokenInfo.decimals);
       const parts = formatted.split('.');
@@ -78,6 +79,7 @@ export async function formatTokenAmount(
 export async function formatValueEnhanced(
   _name: string,
   value: unknown,
+  chainId?: string | null,
   contextToken?: string
 ): Promise<{ formatted: string; raw: string }> {
   const raw = JSON.stringify(value, null, 2);
@@ -90,7 +92,7 @@ export async function formatValueEnhanced(
 
     // Handle BigNumber amounts
     if (isBigNumberLike(value)) {
-      const formatted = await formatTokenAmount(value, contextToken);
+      const formatted = await formatTokenAmount(value, contextToken, chainId);
       return { formatted, raw };
     }
 
@@ -104,7 +106,7 @@ export async function formatValueEnhanced(
       if (value.every((item) => typeof item === 'object' && item && 'name' in item && 'value' in item)) {
         const parts: string[] = [];
         for (const item of value) {
-          const itemResult = await formatValueEnhanced(item.name, item.value);
+          const itemResult = await formatValueEnhanced(item.name, item.value, chainId);
           parts.push(`${item.name}: ${itemResult.formatted}`);
         }
         return { formatted: parts.join('\n'), raw };
@@ -112,7 +114,7 @@ export async function formatValueEnhanced(
 
       // Check if it's a path array
       if (value.every((item) => typeof item === 'object' && item && 'intermediateCurrency' in item)) {
-        const pathDesc = await formatPath(value);
+        const pathDesc = await formatPath(value, chainId);
         return { formatted: pathDesc, raw };
       }
 
@@ -125,7 +127,7 @@ export async function formatValueEnhanced(
 
       // Handle swap-like objects
       if ('currencyIn' in obj || 'currencyOut' in obj || 'path' in obj) {
-        const formatted = await formatSwapObject(obj);
+        const formatted = await formatSwapObject(obj, chainId);
         return { formatted, raw };
       }
 
@@ -134,7 +136,7 @@ export async function formatValueEnhanced(
 
     // Handle addresses
     if (typeof value === 'string' && value.startsWith('0x') && value.length === 42) {
-      const tokenInfo = await resolveToken(value);
+      const tokenInfo = await resolveToken(value, chainId || undefined);
       if (tokenInfo) {
         return {
           formatted: `${tokenInfo.symbol} (${value.slice(0, 6)}...${value.slice(-4)})`,
@@ -158,12 +160,12 @@ export async function formatValueEnhanced(
 /**
  * Format path array
  */
-async function formatPath(path: any[]): Promise<string> {
+async function formatPath(path: any[], chainId?: string | null): Promise<string> {
   const steps: string[] = [];
 
   for (const hop of path) {
     if (hop.intermediateCurrency) {
-      const token = await resolveToken(hop.intermediateCurrency);
+      const token = await resolveToken(hop.intermediateCurrency, chainId || undefined);
       const symbol = token?.symbol || 'Unknown';
       const fee = hop.fee ? ` (${hop.fee / 10000}%)` : '';
       steps.push(`→ ${symbol}${fee}`);
@@ -176,7 +178,7 @@ async function formatPath(path: any[]): Promise<string> {
 /**
  * Format swap object
  */
-async function formatSwapObject(obj: Record<string, any>): Promise<string> {
+async function formatSwapObject(obj: Record<string, any>, chainId?: string | null): Promise<string> {
   const parts: string[] = [];
 
   try {
@@ -189,7 +191,7 @@ async function formatSwapObject(obj: Record<string, any>): Promise<string> {
 
     // Currency In
     if (obj.currencyIn) {
-      const token = await resolveToken(obj.currencyIn);
+      const token = await resolveToken(obj.currencyIn, chainId || undefined);
       const addr = obj.currencyIn === '0x0000000000000000000000000000000000000000' ? 'Native ETH' :
         `${obj.currencyIn.slice(0, 6)}...${obj.currencyIn.slice(-4)}`;
       parts.push(`From: ${token?.symbol || addr}`);
@@ -197,7 +199,7 @@ async function formatSwapObject(obj: Record<string, any>): Promise<string> {
 
     // Currency Out
     if (obj.currencyOut) {
-      const token = await resolveToken(obj.currencyOut);
+      const token = await resolveToken(obj.currencyOut, chainId || undefined);
       const addr = obj.currencyOut === '0x0000000000000000000000000000000000000000' ? 'Native ETH' :
         `${obj.currencyOut.slice(0, 6)}...${obj.currencyOut.slice(-4)}`;
       parts.push(`To: ${token?.symbol || addr}`);
@@ -206,25 +208,25 @@ async function formatSwapObject(obj: Record<string, any>): Promise<string> {
 
     // Amount In
     if (obj.amountIn) {
-      const formatted = await formatTokenAmount(obj.amountIn, obj.currencyIn);
+      const formatted = await formatTokenAmount(obj.amountIn, obj.currencyIn, chainId);
       parts.push(`Amount In: ${formatted}`);
     }
 
     // Amount Out
     if (obj.amountOut) {
-      const formatted = await formatTokenAmount(obj.amountOut, outputToken || obj.currencyOut);
+      const formatted = await formatTokenAmount(obj.amountOut, outputToken || obj.currencyOut, chainId);
       parts.push(`Amount Out: ${formatted}`);
     }
 
     // Amount Out Minimum
     if (obj.amountOutMinimum) {
-      const formatted = await formatTokenAmount(obj.amountOutMinimum, outputToken || obj.currencyOut);
+      const formatted = await formatTokenAmount(obj.amountOutMinimum, outputToken || obj.currencyOut, chainId);
       parts.push(`Min Out: ${formatted}`);
     }
 
     // Path
     if (obj.path && Array.isArray(obj.path)) {
-      const pathDesc = await formatPath(obj.path);
+      const pathDesc = await formatPath(obj.path, chainId);
       if (pathDesc) {
         parts.push(`Path: ${pathDesc}`);
       }

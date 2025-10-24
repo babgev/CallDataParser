@@ -6,6 +6,7 @@ import { formatValueEnhanced } from '../utils/enhancedFormatter';
 interface CommandCardProps {
   command: ParsedCommand;
   index: number;
+  chainId: string | null;
 }
 
 interface EnhancedParam {
@@ -15,7 +16,7 @@ interface EnhancedParam {
   raw: string;
 }
 
-export function CommandCard({ command, index }: CommandCardProps) {
+export function CommandCard({ command, index, chainId }: CommandCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showRaw, setShowRaw] = useState<Record<number, boolean>>({});
   const [enhancedParams, setEnhancedParams] = useState<EnhancedParam[]>([]);
@@ -30,7 +31,7 @@ export function CommandCard({ command, index }: CommandCardProps) {
       for (const param of command.params) {
         try {
           console.log('Enhancing param:', param.name, 'value type:', typeof param.value);
-          const result = await formatValueEnhanced(param.name, param.value);
+          const result = await formatValueEnhanced(param.name, param.value, chainId);
           console.log('Enhanced result for', param.name, ':', result.formatted.substring(0, 100));
           enhanced.push({
             name: param.name,
@@ -60,11 +61,11 @@ export function CommandCard({ command, index }: CommandCardProps) {
   };
 
   useEffect(() => {
-    if (expanded && enhancedParams.length === 0) {
+    if (expanded) {
       enhanceParams();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expanded]);
+  }, [expanded, chainId]);
 
   const toggleRaw = (idx: number) => {
     setShowRaw(prev => ({ ...prev, [idx]: !prev[idx] }));

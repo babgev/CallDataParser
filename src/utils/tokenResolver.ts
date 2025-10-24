@@ -16,8 +16,12 @@ interface LayerSwapToken {
   price_in_usd: number;
 }
 
-interface LayerSwapNetwork {
+export interface LayerSwapNetwork {
   chain_id: string;
+  name: string;
+  display_name: string;
+  logo: string;
+  type: string;
   tokens: LayerSwapToken[];
 }
 

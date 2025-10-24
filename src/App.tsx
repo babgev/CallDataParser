@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CalldataInput } from './components/CalldataInput';
 import { ParsedOutput } from './components/ParsedOutput';
+import { NetworkPicker } from './components/NetworkPicker';
 import { parseCalldata } from './utils/parser';
 import type { ParsedCommand } from './types';
 
@@ -8,6 +9,7 @@ function App() {
   const [commands, setCommands] = useState<ParsedCommand[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
 
   const handleParse = async (calldata: string) => {
     setLoading(true);
@@ -42,6 +44,12 @@ function App() {
           </p>
         </div>
 
+        {/* Network Picker */}
+        <NetworkPicker
+          selectedChainId={selectedChainId}
+          onNetworkChange={setSelectedChainId}
+        />
+
         {/* Input Section */}
         <CalldataInput onParse={handleParse} loading={loading} />
 
@@ -72,7 +80,7 @@ function App() {
         )}
 
         {/* Output Section */}
-        <ParsedOutput commands={commands} />
+        <ParsedOutput commands={commands} chainId={selectedChainId} />
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-12">

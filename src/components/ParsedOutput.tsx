@@ -5,9 +5,10 @@ import { copyToClipboard } from '../utils/formatter';
 
 interface ParsedOutputProps {
   commands: ParsedCommand[];
+  chainId: string | null;
 }
 
-export function ParsedOutput({ commands }: ParsedOutputProps) {
+export function ParsedOutput({ commands, chainId }: ParsedOutputProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopyJSON = async () => {
@@ -45,7 +46,7 @@ export function ParsedOutput({ commands }: ParsedOutputProps) {
 
       <div className="space-y-3">
         {commands.map((command, index) => (
-          <CommandCard key={index} command={command} index={index} />
+          <CommandCard key={index} command={command} index={index} chainId={chainId} />
         ))}
       </div>
     </div>
