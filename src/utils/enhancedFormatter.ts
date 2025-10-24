@@ -169,43 +169,52 @@ async function formatPath(path: any[]): Promise<string> {
 async function formatSwapObject(obj: Record<string, any>): Promise<string> {
   const parts: string[] = [];
 
-  // Currency In
-  if (obj.currencyIn) {
-    const token = await resolveToken(obj.currencyIn);
-    parts.push(`From: ${token?.symbol || 'Unknown'}`);
-  }
-
-  // Currency Out
-  if (obj.currencyOut) {
-    const token = await resolveToken(obj.currencyOut);
-    parts.push(`To: ${token?.symbol || 'Unknown'}`);
-  }
-
-  // Amount In
-  if (obj.amountIn) {
-    const formatted = await formatTokenAmount(obj.amountIn, obj.currencyIn);
-    parts.push(`Amount In: ${formatted}`);
-  }
-
-  // Amount Out
-  if (obj.amountOut) {
-    const formatted = await formatTokenAmount(obj.amountOut, obj.currencyOut);
-    parts.push(`Amount Out: ${formatted}`);
-  }
-
-  // Amount Out Minimum
-  if (obj.amountOutMinimum) {
-    const formatted = await formatTokenAmount(obj.amountOutMinimum, obj.currencyOut);
-    parts.push(`Min Out: ${formatted}`);
-  }
-
-  // Path
-  if (obj.path && Array.isArray(obj.path)) {
-    const pathDesc = await formatPath(obj.path);
-    if (pathDesc) {
-      parts.push(`Path: ${pathDesc}`);
+  try {
+    // Currency In
+    if (obj.currencyIn) {
+      const token = await resolveToken(obj.currencyIn);
+      const addr = obj.currencyIn === '0x0000000000000000000000000000000000000000' ? 'Native ETH' :
+        `${obj.currencyIn.slice(0, 6)}...${obj.currencyIn.slice(-4)}`;
+      parts.push(`From: ${token?.symbol || addr}`);
     }
-  }
 
-  return parts.join('\n');
+    // Currency Out
+    if (obj.currencyOut) {
+      const token = await resolveToken(obj.currencyOut);
+      const addr = obj.currencyOut === '0x0000000000000000000000000000000000000000' ? 'Native ETH' :
+        `${obj.currencyOut.slice(0, 6)}...${obj.currencyOut.slice(-4)}`;
+      parts.push(`To: ${token?.symbol || addr}`);
+    }
+
+    // Amount In
+    if (obj.amountIn) {
+      const formatted = await formatTokenAmount(obj.amountIn, obj.currencyIn);
+      parts.push(`Amount In: ${formatted}`);
+    }
+
+    // Amount Out
+    if (obj.amountOut) {
+      const formatted = await formatTokenAmount(obj.amountOut, obj.currencyOut);
+      parts.push(`Amount Out: ${formatted}`);
+    }
+
+    // Amount Out Minimum
+    if (obj.amountOutMinimum) {
+      const formatted = await formatTokenAmount(obj.amountOutMinimum, obj.currencyOut);
+      parts.push(`Min Out: ${formatted}`);
+    }
+
+    // Path
+    if (obj.path && Array.isArray(obj.path)) {
+      const pathDesc = await formatPath(obj.path);
+      if (pathDesc) {
+        parts.push(`Path: ${pathDesc}`);
+      }
+    }
+
+    return parts.length > 0 ? parts.join('\n') : 'Swap Details';
+  } catch (error) {
+    console.error('Error formatting swap object:', error);
+    return 'Error formatting swap details';
+  }
 }
