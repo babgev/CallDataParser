@@ -100,6 +100,16 @@ export async function formatValueEnhanced(
         return { formatted: '[]', raw: '[]' };
       }
 
+      // Check if it's a V4 command parameter array (array of objects with name/value)
+      if (value.every((item) => typeof item === 'object' && item && 'name' in item && 'value' in item)) {
+        const parts: string[] = [];
+        for (const item of value) {
+          const itemResult = await formatValueEnhanced(item.name, item.value);
+          parts.push(`${item.name}: ${itemResult.formatted}`);
+        }
+        return { formatted: parts.join('\n'), raw };
+      }
+
       // Check if it's a path array
       if (value.every((item) => typeof item === 'object' && item && 'intermediateCurrency' in item)) {
         const pathDesc = await formatPath(value);
