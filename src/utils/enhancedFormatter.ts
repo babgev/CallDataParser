@@ -180,6 +180,13 @@ async function formatSwapObject(obj: Record<string, any>): Promise<string> {
   const parts: string[] = [];
 
   try {
+    // Extract output token from path if available
+    let outputToken: string | undefined;
+    if (obj.path && Array.isArray(obj.path) && obj.path.length > 0) {
+      // For V4, the intermediateCurrency is the output token
+      outputToken = obj.path[0].intermediateCurrency;
+    }
+
     // Currency In
     if (obj.currencyIn) {
       const token = await resolveToken(obj.currencyIn);
@@ -194,6 +201,7 @@ async function formatSwapObject(obj: Record<string, any>): Promise<string> {
       const addr = obj.currencyOut === '0x0000000000000000000000000000000000000000' ? 'Native ETH' :
         `${obj.currencyOut.slice(0, 6)}...${obj.currencyOut.slice(-4)}`;
       parts.push(`To: ${token?.symbol || addr}`);
+      outputToken = obj.currencyOut; // Use currencyOut if available
     }
 
     // Amount In
@@ -204,13 +212,13 @@ async function formatSwapObject(obj: Record<string, any>): Promise<string> {
 
     // Amount Out
     if (obj.amountOut) {
-      const formatted = await formatTokenAmount(obj.amountOut, obj.currencyOut);
+      const formatted = await formatTokenAmount(obj.amountOut, outputToken || obj.currencyOut);
       parts.push(`Amount Out: ${formatted}`);
     }
 
     // Amount Out Minimum
     if (obj.amountOutMinimum) {
-      const formatted = await formatTokenAmount(obj.amountOutMinimum, obj.currencyOut);
+      const formatted = await formatTokenAmount(obj.amountOutMinimum, outputToken || obj.currencyOut);
       parts.push(`Min Out: ${formatted}`);
     }
 
