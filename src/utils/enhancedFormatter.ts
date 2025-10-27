@@ -19,6 +19,9 @@ function isBigNumberLike(value: unknown): value is BigNumberLike {
   );
 }
 
+// Special value indicating to use contract balance
+const CONTRACT_BALANCE = '0x8000000000000000000000000000000000000000000000000000000000000000';
+
 /**
  * Convert BigNumber hex to bigint
  */
@@ -36,12 +39,23 @@ export async function formatTokenAmount(
   tokenAddress?: string,
   chainId?: string | null
 ): Promise<string> {
+  // Handle BigNumber objects - check for CONTRACT_BALANCE first
+  if (isBigNumberLike(amount)) {
+    const hex = (amount as any).hex || (amount as any)._hex;
+    if (hex === CONTRACT_BALANCE) {
+      return 'CONTRACT_BALANCE (use all from previous step)';
+    }
+  }
+
   let amountBigInt: bigint;
 
-  // Handle BigNumber objects
+  // Convert to bigint
   if (isBigNumberLike(amount)) {
     amountBigInt = bigNumberToBigInt(amount);
   } else if (typeof amount === 'string') {
+    if (amount === CONTRACT_BALANCE) {
+      return 'CONTRACT_BALANCE (use all from previous step)';
+    }
     try {
       amountBigInt = BigInt(amount);
     } catch {
@@ -112,9 +126,21 @@ export async function formatValueEnhanced(
         return { formatted: parts.join('\n'), raw };
       }
 
-      // Check if it's a path array
+      // Check if it's a V2 path array (array of token addresses)
+      if (value.every((item) => typeof item === 'string' && item.startsWith('0x') && item.length === 42)) {
+        const pathDesc = await formatV2Path(value, chainId);
+        return { formatted: pathDesc, raw };
+      }
+
+      // Check if it's a V3 path array (array of objects with tokenIn/tokenOut/fee)
+      if (value.every((item) => typeof item === 'object' && item && 'tokenIn' in item && 'tokenOut' in item)) {
+        const pathDesc = await formatV3Path(value, chainId);
+        return { formatted: pathDesc, raw };
+      }
+
+      // Check if it's a V4 path array (array of objects with intermediateCurrency)
       if (value.every((item) => typeof item === 'object' && item && 'intermediateCurrency' in item)) {
-        const pathDesc = await formatPath(value, chainId);
+        const pathDesc = await formatV4Path(value, chainId);
         return { formatted: pathDesc, raw };
       }
 
@@ -158,9 +184,47 @@ export async function formatValueEnhanced(
 }
 
 /**
- * Format path array
+ * Format V2 path array (simple array of token addresses)
  */
-async function formatPath(path: any[], chainId?: string | null): Promise<string> {
+async function formatV2Path(path: string[], chainId?: string | null): Promise<string> {
+  const tokens: string[] = [];
+
+  for (const address of path) {
+    const token = await resolveToken(address, chainId || undefined);
+    tokens.push(token?.symbol || `${address.slice(0, 6)}...${address.slice(-4)}`);
+  }
+
+  return tokens.join(' → ');
+}
+
+/**
+ * Format V3 path array (array of {tokenIn, tokenOut, fee} objects)
+ */
+async function formatV3Path(path: any[], chainId?: string | null): Promise<string> {
+  if (path.length === 0) return '';
+
+  const steps: string[] = [];
+
+  // Add first token
+  const firstHop = path[0];
+  const firstToken = await resolveToken(firstHop.tokenIn, chainId || undefined);
+  steps.push(firstToken?.symbol || `${firstHop.tokenIn.slice(0, 6)}...${firstHop.tokenIn.slice(-4)}`);
+
+  // Add each hop
+  for (const hop of path) {
+    const token = await resolveToken(hop.tokenOut, chainId || undefined);
+    const symbol = token?.symbol || `${hop.tokenOut.slice(0, 6)}...${hop.tokenOut.slice(-4)}`;
+    const fee = hop.fee ? ` (${hop.fee / 10000}%)` : '';
+    steps.push(`→${fee} ${symbol}`);
+  }
+
+  return steps.join(' ');
+}
+
+/**
+ * Format V4 path array (array with intermediateCurrency)
+ */
+async function formatV4Path(path: any[], chainId?: string | null): Promise<string> {
   const steps: string[] = [];
 
   for (const hop of path) {
@@ -226,7 +290,7 @@ async function formatSwapObject(obj: Record<string, any>, chainId?: string | nul
 
     // Path
     if (obj.path && Array.isArray(obj.path)) {
-      const pathDesc = await formatPath(obj.path, chainId);
+      const pathDesc = await formatV4Path(obj.path, chainId);
       if (pathDesc) {
         parts.push(`Path: ${pathDesc}`);
       }

@@ -28,10 +28,37 @@ export function CommandCard({ command, index, chainId }: CommandCardProps) {
     try {
       const enhanced: EnhancedParam[] = [];
 
+      // Extract token context from path parameter for V2/V3 swaps
+      let inputToken: string | undefined;
+      let outputToken: string | undefined;
+
+      const pathParam = command.params.find(p => p.name === 'path');
+      if (pathParam && Array.isArray(pathParam.value)) {
+        // V2 path: array of token addresses
+        if (pathParam.value.every((item: any) => typeof item === 'string')) {
+          inputToken = pathParam.value[0];
+          outputToken = pathParam.value[pathParam.value.length - 1];
+        }
+        // V3 path: array of {tokenIn, tokenOut, fee}
+        else if (pathParam.value.length > 0 && pathParam.value[0].tokenIn) {
+          inputToken = pathParam.value[0].tokenIn;
+          outputToken = pathParam.value[pathParam.value.length - 1].tokenOut;
+        }
+      }
+
       for (const param of command.params) {
         try {
           console.log('Enhancing param:', param.name, 'value type:', typeof param.value);
-          const result = await formatValueEnhanced(param.name, param.value, chainId);
+
+          // Determine token context based on parameter name
+          let contextToken: string | undefined;
+          if ((param.name === 'amountIn' || param.name === 'amountInMaximum') && inputToken) {
+            contextToken = inputToken;
+          } else if ((param.name === 'amountOut' || param.name === 'amountOutMin' || param.name === 'amountOutMinimum') && outputToken) {
+            contextToken = outputToken;
+          }
+
+          const result = await formatValueEnhanced(param.name, param.value, chainId, contextToken);
           console.log('Enhanced result for', param.name, ':', result.formatted.substring(0, 100));
           enhanced.push({
             name: param.name,
